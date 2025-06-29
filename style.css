@@ -430,7 +430,7 @@ body {
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     max-width: 1000px;
     width: 100%;
-    margin-top: 20px;
+    margin: 0 auto;
 }
 
 .result-container h2 {
@@ -531,6 +531,7 @@ body {
     justify-content: center;
     margin-top: 30px;
 }
+
 
 /* 점수 팝업 모달 스타일 */
 .modal {
@@ -818,4 +819,362 @@ body {
 @keyframes timerBlink {
     0%, 50% { color: #ff6b35; }
     51%, 100% { color: #ff0000; }
+}
+
+/* 새로운 상호작용 모드 스타일 */
+
+/* 애니메이션 모드 */
+.animation-mode .shape {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.animation-mode .shape:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+}
+
+.animation-fill {
+    animation: fillAnimation 1.5s ease-out forwards;
+}
+
+@keyframes fillAnimation {
+    0% {
+        opacity: 0;
+        transform: scale(0);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 다중 터치 모드 */
+.multitouch-mode .shape {
+    cursor: crosshair;
+    position: relative;
+}
+
+.touch-indicator {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #FF9800, #F57C00);
+    pointer-events: none;
+    animation: touchRipple 0.6s ease-out forwards;
+    z-index: 10;
+}
+
+@keyframes touchRipple {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+
+/* 패턴 모드 */
+.pattern-mode .shape {
+    cursor: cell;
+    position: relative;
+}
+
+.pattern-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 1px;
+}
+
+.pattern-cell {
+    border: 1px dotted rgba(255, 255, 255, 0.3);
+    transition: all 0.2s ease;
+}
+
+.pattern-cell.filled {
+    background: rgba(156, 39, 176, 0.8);
+    border-color: #9C27B0;
+}
+
+/* 스피드 모드 */
+.speed-mode .shape {
+    cursor: pointer;
+    transition: none;
+}
+
+.speed-fill {
+    animation: speedFill 0.1s ease;
+}
+
+@keyframes speedFill {
+    0% {
+        background-color: rgba(255, 193, 7, 0.3);
+    }
+    100% {
+        background-color: rgba(255, 193, 7, 0.8);
+    }
+}
+
+.speed-counter {
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    background: #FF5722;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    animation: counterPulse 0.3s ease;
+}
+
+@keyframes counterPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+/* 로봇 정밀 모드 */
+.robot-mode .shape {
+    cursor: crosshair;
+    position: relative;
+}
+
+.robot-guide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    border: 2px dashed #607D8B;
+    animation: robotScan 2s infinite linear;
+}
+
+@keyframes robotScan {
+    0% {
+        border-color: #607D8B;
+        box-shadow: inset 0 0 10px rgba(96, 125, 139, 0.3);
+    }
+    50% {
+        border-color: #00BCD4;
+        box-shadow: inset 0 0 20px rgba(0, 188, 212, 0.5);
+    }
+    100% {
+        border-color: #607D8B;
+        box-shadow: inset 0 0 10px rgba(96, 125, 139, 0.3);
+    }
+}
+
+.robot-precision {
+    position: absolute;
+    background: rgba(0, 188, 212, 0.9);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 물방울 모드 */
+.droplet-mode .shape {
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.water-droplet {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: radial-gradient(circle, #2196F3, #1976D2);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: dropFall 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes dropFall {
+    0% {
+        transform: translateY(-20px) scale(0);
+        opacity: 0;
+    }
+    20% {
+        transform: translateY(-10px) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(0) scale(1.2);
+        opacity: 0.8;
+    }
+}
+
+.water-level {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(to top, #2196F3, rgba(33, 150, 243, 0.6));
+    transition: height 0.3s ease;
+    border-radius: 0 0 50% 50%;
+}
+
+/* 모드별 설명 툴팁 */
+.mode-tooltip {
+    position: absolute;
+    bottom: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 100;
+}
+
+.shape:hover .mode-tooltip {
+    opacity: 1;
+}
+
+/* 터치 효과 애니메이션 */
+@keyframes tapEffect {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.5);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+
+/* 분수 표기 스타일 */
+.fraction, .proper-fraction {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    margin: 0 4px;
+    font-family: 'Times New Roman', serif;
+    font-weight: bold;
+}
+
+.mixed-number {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    vertical-align: middle;
+}
+
+.whole-number {
+    font-size: 0.8em;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.numerator, .denominator {
+    font-size: 0.9em;
+    color: #2c3e50;
+    line-height: 1;
+    padding: 2px 4px;
+}
+
+.fraction-bar {
+    width: 100%;
+    height: 2px;
+    background-color: #34495e;
+    margin: 1px 0;
+    min-width: 24px;
+}
+
+/* 질문 영역의 분수 크기 조정 */
+#question-text .fraction,
+#question-text .mixed-number {
+    font-size: 1.4em;
+}
+
+#question-text .numerator,
+#question-text .denominator {
+    font-size: 1.1em;
+}
+
+#question-text .whole-number {
+    font-size: 1em;
+}
+
+/* 모달에서의 분수 크기 조정 */
+#modal-target-answer .fraction,
+#modal-target-answer .mixed-number {
+    font-size: 1.2em;
+}
+
+/* 피드백 영역의 분수 크기 조정 */
+.feedback-item .fraction,
+.feedback-item .mixed-number {
+    font-size: 1.1em;
+}
+
+/* 분수 호버 효과 */
+.fraction:hover, .mixed-number:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+}
+
+/* 반응형 분수 크기 */
+@media (max-width: 768px) {
+    #question-text .fraction,
+    #question-text .mixed-number {
+        font-size: 1.2em;
+    }
+    
+    #question-text .numerator,
+    #question-text .denominator {
+        font-size: 1em;
+    }
+    
+    #question-text .whole-number {
+        font-size: 0.9em;
+    }
+}
+
+@media (max-width: 480px) {
+    #question-text .fraction,
+    #question-text .mixed-number {
+        font-size: 1em;
+    }
+    
+    #question-text .numerator,
+    #question-text .denominator {
+        font-size: 0.9em;
+    }
+    
+    #question-text .whole-number {
+        font-size: 0.8em;
+    }
+    
+    .fraction-bar {
+        min-width: 20px;
+    }
 }

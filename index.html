@@ -31,6 +31,15 @@
                 </div>
                 
                 <div class="setting-group">
+                    <label for="interaction-mode">도형 상호작용 모드:</label>
+                    <select id="interaction-mode">
+                        <option value="drag">드래그 모드 (기본)</option>
+                        <option value="tap">연속 터치 모드</option>
+                    </select>
+                    <small>드래그하거나 연속 터치로 도형을 채웁니다</small>
+                </div>
+                
+                <div class="setting-group">
                     <label for="time-limit">제한 시간 (초):</label>
                     <input type="number" id="time-limit" value="30" min="10" max="300">
                 </div>
@@ -92,6 +101,7 @@
             
             <div class="settings-buttons">
                 <button id="help-btn" class="btn btn-help">사용법 보기</button>
+                <button id="clear-storage-btn" class="btn btn-warning">저장 기록 삭제</button>
                 <button id="start-btn" class="btn btn-primary">게임 시작</button>
             </div>
         </div>
@@ -155,10 +165,6 @@
             <div class="feedback-area">
                 <div id="feedback-content">
                     <div class="feedback-item">
-                        <label>목표 분수:</label>
-                        <span id="target-fraction">1과 3/4</span>
-                    </div>
-                    <div class="feedback-item">
                         <label>진행 상황:</label>
                         <span id="progress-display">문제 1/10</span>
                     </div>
@@ -195,7 +201,7 @@
                     <span id="total-problems">10</span>
                 </div>
                 <div class="summary-item">
-                    <label>정답 수:</label>
+                    <label>정답 수 (80점 이상):</label>
                     <span id="correct-count">7</span>
                 </div>
                 <div class="summary-item">
@@ -203,7 +209,7 @@
                     <span id="avg-accuracy">85%</span>
                 </div>
                 <div class="summary-item">
-                    <label>총 점수:</label>
+                    <label>평균 점수:</label>
                     <span id="total-score">750점</span>
                 </div>
             </div>

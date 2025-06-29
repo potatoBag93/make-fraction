@@ -12,7 +12,8 @@ class FractionGame {
             skipCount: 3,
             hideAnswers: false,
             mixedNumberRatio: 30,    // 대분수 출현 비율 (%)
-            mixedNumberMax: 3        // 대분수 자연수 최대값
+            mixedNumberMax: 3,       // 대분수 자연수 최대값
+            interactionMode: 'drag'  // 도형 상호작용 모드
         };
         
         this.gameState = {
@@ -35,6 +36,11 @@ class FractionGame {
         this.timer = null;
         this.currentShape = 'circle';
         
+        // 상호작용 모드별 상태 변수들
+        this.modeStates = {
+            tapIncrements: {} // 연속 터치 모드
+        };
+        
         this.init();
     }
     
@@ -44,10 +50,85 @@ class FractionGame {
         this.showScreen('settings-screen');
     }
     
+    setupSettingsPreview() {
+        // 설정 값들을 기본값으로 초기화하고 미리보기 설정
+        const elements = {
+            'difficulty': document.getElementById('difficulty'),
+            'shape-random': document.getElementById('shape-random'),
+            'time-limit': document.getElementById('time-limit'),
+            'streak-mode': document.getElementById('streak-mode'),
+            'answer-mode': document.getElementById('answer-mode'),
+            'total-questions': document.getElementById('total-questions'),
+            'skip-allowed': document.getElementById('skip-allowed'),
+            'skip-count': document.getElementById('skip-count'),
+            'hide-answers': document.getElementById('hide-answers'),
+            'mixed-number-ratio': document.getElementById('mixed-number-ratio'),
+            'mixed-number-max': document.getElementById('mixed-number-max'),
+            'interaction-mode': document.getElementById('interaction-mode')
+        };
+        
+        // 기본값 설정
+        if (elements['difficulty']) elements['difficulty'].value = this.settings.difficulty;
+        if (elements['shape-random']) elements['shape-random'].value = this.settings.shapeRandom.toString();
+        if (elements['time-limit']) elements['time-limit'].value = this.settings.timeLimit;
+        if (elements['streak-mode']) elements['streak-mode'].value = this.settings.streakMode.toString();
+        if (elements['answer-mode']) elements['answer-mode'].value = this.settings.answerMode;
+        if (elements['total-questions']) elements['total-questions'].value = this.settings.totalQuestions;
+        if (elements['skip-allowed']) elements['skip-allowed'].value = this.settings.skipAllowed.toString();
+        if (elements['skip-count']) elements['skip-count'].value = this.settings.skipCount;
+        if (elements['hide-answers']) elements['hide-answers'].value = this.settings.hideAnswers.toString();
+        if (elements['mixed-number-ratio']) elements['mixed-number-ratio'].value = this.settings.mixedNumberRatio;
+        if (elements['mixed-number-max']) elements['mixed-number-max'].value = this.settings.mixedNumberMax;
+        if (elements['interaction-mode']) elements['interaction-mode'].value = this.settings.interactionMode;
+        
+        // 설정 변경 시 미리보기 업데이트 이벤트 추가
+        Object.keys(elements).forEach(key => {
+            const element = elements[key];
+            if (element) {
+                element.addEventListener('change', () => {
+                    this.updateSettingsPreview();
+                });
+            }
+        });
+        
+        // 초기 미리보기 업데이트
+        this.updateSettingsPreview();
+    }
+    
+    updateSettingsPreview() {
+        // 설정값에 따른 미리보기 정보 업데이트
+        const interactionElement = document.getElementById('interaction-mode');
+        
+        // 상호작용 모드에 따른 설명 업데이트
+        if (interactionElement) {
+            const mode = interactionElement.value;
+            const modeDescriptions = {
+                'drag': '마우스 드래그로 도형을 자유롭게 채웁니다',
+                'tap': '연속 터치로 조금씩 도형을 채웁니다',
+                'draw': '마우스로 직접 그려서 도형을 채웁니다',
+                'puzzle': '퍼즐 조각을 클릭하여 채웁니다',
+                'pump': '물컵을 펌프로 채웁니다',
+                'slice': '원형을 슬라이스하여 채웁니다',
+                'animation': '클릭하면 자동 애니메이션으로 채워집니다',
+                'multitouch': '여러 손가락으로 동시에 터치합니다',
+                'pattern': '패턴 방식으로 격자를 채웁니다',
+                'speed': '빠른 연속 클릭으로 채웁니다',
+                'robot': '정밀하게 10%씩 단계적으로 채웁니다',
+                'droplet': '물방울이 떨어져서 채워집니다'
+            };
+            
+            const modeDescription = interactionElement.parentElement.querySelector('small');
+            if (modeDescription) {
+                modeDescription.textContent = modeDescriptions[mode] || '각 모드별로 다른 방식으로 도형을 채웁니다';
+            }
+        }
+    }
+    
     bindEvents() {
         // 설정 화면 이벤트
         document.getElementById('start-btn').addEventListener('click', () => this.startGame());
         document.getElementById('help-btn').addEventListener('click', () => this.showTutorial());
+        document.getElementById('clear-storage-btn').addEventListener('click', () => this.confirmClearStorage());
         
         // 튜토리얼 화면 이벤트
         document.getElementById('tutorial-close').addEventListener('click', () => this.closeTutorial());
@@ -70,8 +151,29 @@ class FractionGame {
     }
     
     bindShapeEvents() {
-        // 이벤트는 동적으로 생성되는 도형에 위임방식으로 바인딩
+        // 먼저 기존 이벤트 리스너들을 제거
         const shapeContainer = document.getElementById('shape-container');
+        const newContainer = shapeContainer.cloneNode(true);
+        shapeContainer.parentNode.replaceChild(newContainer, shapeContainer);
+        
+        // 새로운 컨테이너에 이벤트 바인딩
+        const container = document.getElementById('shape-container');
+        
+        console.log('Binding events for mode:', this.settings.interactionMode);
+        
+        // 상호작용 모드에 따라 다른 이벤트 처리
+        switch(this.settings.interactionMode) {
+            case 'tap':
+                this.bindTapMode(container);
+                break;
+            default: // drag mode
+                this.bindDragMode(container);
+                break;
+        }
+    }
+    
+    // 기본 드래그 모드
+    bindDragMode(shapeContainer) {
         let isMouseDown = false;
         let currentShapeIndex = -1;
         
@@ -85,7 +187,6 @@ class FractionGame {
             const indexStr = shapeElement.dataset.index;
             currentShapeIndex = parseInt(indexStr);
             
-            // 유효성 검사
             if (isNaN(currentShapeIndex) || currentShapeIndex < 0) {
                 console.warn(`Invalid shape index: ${indexStr}`);
                 currentShapeIndex = -1;
@@ -121,7 +222,7 @@ class FractionGame {
             currentShapeIndex = -1;
         });
         
-        // 터치 이벤트
+        // 터치 이벤트도 동일하게 처리
         shapeContainer.addEventListener('touchstart', (e) => {
             if (!this.gameState.isPlaying) return;
             e.preventDefault();
@@ -132,9 +233,7 @@ class FractionGame {
             const indexStr = shapeElement.dataset.index;
             currentShapeIndex = parseInt(indexStr);
             
-            // 유효성 검사
             if (isNaN(currentShapeIndex) || currentShapeIndex < 0) {
-                console.warn(`Invalid shape index in touch: ${indexStr}`);
                 currentShapeIndex = -1;
                 return;
             }
@@ -147,26 +246,37 @@ class FractionGame {
             this.updateShapeFill(currentShapeIndex, x, y, rect);
         });
         
-        shapeContainer.addEventListener('touchmove', (e) => {
-            if (!this.gameState.isPlaying || currentShapeIndex === -1) return;
-            e.preventDefault();
+        shapeContainer.addEventListener('touchend', () => {
+            currentShapeIndex = -1;
+        });
+    }
+    
+    // 연속 터치 모드 - 터치할 때마다 조금씩 채워짐
+    bindTapMode(shapeContainer) {
+        shapeContainer.addEventListener('click', (e) => {
+            if (!this.gameState.isPlaying) return;
             
             const shapeElement = e.target.closest('.shape');
             if (!shapeElement) return;
             
-            const elementIndex = parseInt(shapeElement.dataset.index);
-            if (isNaN(elementIndex) || elementIndex !== currentShapeIndex) return;
+            const shapeIndex = parseInt(shapeElement.dataset.index);
+            if (isNaN(shapeIndex) || shapeIndex < 0) return;
             
-            const rect = shapeElement.getBoundingClientRect();
-            const touch = e.touches[0];
-            const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
+            // 초기화
+            if (!this.modeStates.tapIncrements[shapeIndex]) {
+                this.modeStates.tapIncrements[shapeIndex] = 0;
+            }
             
-            this.updateShapeFill(currentShapeIndex, x, y, rect);
-        });
-        
-        shapeContainer.addEventListener('touchend', () => {
-            currentShapeIndex = -1;
+            // 매 터치마다 5%씩 증가
+            this.modeStates.tapIncrements[shapeIndex] = Math.min(1, this.modeStates.tapIncrements[shapeIndex] + 0.05);
+            this.userFillAmounts[shapeIndex] = this.modeStates.tapIncrements[shapeIndex];
+            
+            // 시각적 피드백
+            this.updateShapeVisualFill(shapeIndex, this.modeStates.tapIncrements[shapeIndex]);
+            this.updateFeedback();
+            
+            // 터치 애니메이션 효과
+            this.showTapEffect(shapeElement, e.clientX, e.clientY);
         });
     }
     
@@ -199,6 +309,7 @@ class FractionGame {
         // 대분수 설정값 읽기 및 유효성 검사
         this.settings.mixedNumberRatio = Math.max(0, Math.min(100, parseInt(document.getElementById('mixed-number-ratio').value) || 30));
         this.settings.mixedNumberMax = Math.max(1, Math.min(10, parseInt(document.getElementById('mixed-number-max').value) || 3));
+        this.settings.interactionMode = document.getElementById('interaction-mode').value;
         
         // 설정값 검증 및 조정
         this.validateSettings();
@@ -250,6 +361,11 @@ class FractionGame {
     generateQuestion() {
         this.gameState.currentQuestion++;
         
+        // 상호작용 모드별 상태 초기화
+        this.modeStates = {
+            tapIncrements: {}
+        };
+        
         // 분수 생성
         this.currentFraction = this.generateFraction();
         
@@ -257,6 +373,9 @@ class FractionGame {
         if (this.settings.shapeRandom) {
             const shapes = ['circle', 'rectangle', 'cup'];
             this.currentShape = shapes[Math.floor(Math.random() * shapes.length)];
+        } else {
+            // 기본 도형 설정
+            this.currentShape = 'circle';
         }
         
         // UI 업데이트
@@ -265,6 +384,9 @@ class FractionGame {
         this.resetShape();
         this.updateAddShapeButtonVisibility();
         this.updateFeedback(); // 피드백 영역 초기화
+        
+        // 새로운 상호작용 모드 이벤트 바인딩
+        this.bindShapeEvents();
         
         // 타이머 리셋
         this.gameState.timeLeft = this.settings.timeLimit;
@@ -334,17 +456,29 @@ class FractionGame {
     
     updateQuestionDisplay() {
         const questionText = this.formatFraction(this.currentFraction);
-        document.getElementById('question-text').textContent = `${questionText}을 채워보세요!`;
+        document.getElementById('question-text').innerHTML = `${questionText}을 채워보세요!`;
         document.getElementById('question-progress').textContent = 
             `${this.gameState.currentQuestion} / ${this.settings.totalQuestions}`;
-        document.getElementById('target-fraction').textContent = questionText;
     }
     
     formatFraction(fraction) {
         if (fraction.wholeNumber > 0) {
-            return `${fraction.wholeNumber}과 ${fraction.numerator}/${fraction.denominator}`;
+            // 대분수: 자연수 + 진분수
+            return `<span class="mixed-number">
+                        <span class="whole-number">${fraction.wholeNumber}</span>
+                        <span class="proper-fraction">
+                            <span class="numerator">${fraction.numerator}</span>
+                            <span class="fraction-bar"></span>
+                            <span class="denominator">${fraction.denominator}</span>
+                        </span>
+                    </span>`;
         } else {
-            return `${fraction.numerator}/${fraction.denominator}`;
+            // 순수 분수
+            return `<span class="fraction">
+                        <span class="numerator">${fraction.numerator}</span>
+                        <span class="fraction-bar"></span>
+                        <span class="denominator">${fraction.denominator}</span>
+                    </span>`;
         }
     }
     
@@ -404,11 +538,20 @@ class FractionGame {
     createSingleShape(shapeData, index) {
         const shapeDiv = document.createElement('div');
         shapeDiv.className = `shape ${shapeData.type}-shape`;
+        shapeDiv.id = `shape-${index}`;  // ID 추가
         shapeDiv.dataset.index = index;
+        
+        // 상호작용 모드에 따른 CSS 클래스 추가
+        const modeClass = this.settings.interactionMode + '-mode';
+        shapeDiv.classList.add(modeClass);
+        
+        // 모드별 툴팁 추가
+        const tooltip = this.createModeTooltip(this.settings.interactionMode);
+        shapeDiv.appendChild(tooltip);
         
         switch (shapeData.type) {
             case 'circle':
-                shapeDiv.innerHTML = `
+                shapeDiv.innerHTML += `
                     <svg viewBox="0 0 200 200" class="shape-svg">
                         <circle cx="100" cy="100" r="90" fill="none" stroke="#ddd" stroke-width="2"/>
                         <path id="filled-path-${index}" fill="#4CAF50" opacity="0.7" d=""/>
@@ -417,7 +560,7 @@ class FractionGame {
                 `;
                 break;
             case 'rectangle':
-                shapeDiv.innerHTML = `
+                shapeDiv.innerHTML += `
                     <div style="width: 200px; height: 200px; border: 2px solid #ddd; position: relative; background: #f9f9f9;">
                         <div id="filled-rect-${index}" style="background: #4CAF50; opacity: 0.7; height: 100%; width: 0%; position: absolute; left: 0; top: 0;"></div>
                         <div id="answer-rect-${index}" style="background: #FF9800; opacity: 0.8; height: 100%; width: 0%; position: absolute; left: 0; top: 0; display: none;"></div>
@@ -425,7 +568,7 @@ class FractionGame {
                 `;
                 break;
             case 'cup':
-                shapeDiv.innerHTML = `
+                shapeDiv.innerHTML += `
                     <div style="width: 200px; height: 200px; border: 2px solid #2196F3; border-top: none; border-radius: 0 0 20px 20px; position: relative; background: linear-gradient(to top, #e3f2fd 0%, #ffffff 100%);">
                         <div id="filled-rect-${index}" style="background: #4CAF50; opacity: 0.7; height: 0%; width: 100%; position: absolute; bottom: 0;"></div>
                         <div id="answer-rect-${index}" style="background: #FF9800; opacity: 0.8; height: 0%; width: 100%; position: absolute; bottom: 0; display: none;"></div>
@@ -473,6 +616,58 @@ class FractionGame {
                 <div id="answer-rect-${index}" style="background: #FF9800; opacity: 0.8; height: 0%; width: 100%; position: absolute; bottom: 0; display: none;"></div>
             </div>
         `;
+    }
+    
+    // 시각적 채우기 업데이트 (모든 모드에서 공통 사용)
+    updateShapeVisualFill(shapeIndex, percentage) {
+        const shapeData = this.shapesData[shapeIndex];
+        if (!shapeData) return;
+        
+        if (shapeData.type === 'circle') {
+            this.updateCircleFill(shapeIndex, percentage);
+        } else if (shapeData.type === 'cup') {
+            this.updateCupFill(shapeIndex, percentage);
+        } else {
+            this.updateHorizontalFill(shapeIndex, percentage);
+        }
+    }
+    
+    // 터치 효과 애니메이션
+    showTapEffect(shapeElement, clientX, clientY) {
+        const rect = shapeElement.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        
+        const effect = document.createElement('div');
+        effect.style.position = 'absolute';
+        effect.style.left = `${x - 10}px`;
+        effect.style.top = `${y - 10}px`;
+        effect.style.width = '20px';
+        effect.style.height = '20px';
+        effect.style.borderRadius = '50%';
+        effect.style.background = 'radial-gradient(circle, #4CAF50, #2E7D32)';
+        effect.style.pointerEvents = 'none';
+        effect.style.animation = 'tapEffect 0.6s ease-out forwards';
+        effect.style.zIndex = '100';
+        
+        shapeElement.style.position = 'relative';
+        shapeElement.appendChild(effect);
+        
+        setTimeout(() => {
+            effect.remove();
+        }, 600);
+    }
+    
+    // 모드 힌트 표시
+    showModeHint(shapeElement, message) {
+        const hint = document.createElement('div');
+        hint.className = 'mode-hint';
+        hint.textContent = message;
+        shapeElement.appendChild(hint);
+        
+        setTimeout(() => {
+            hint.remove();
+        }, 2000);
     }
     
     updateShapeFill(shapeIndex, x, y, shapeRect) {
@@ -612,10 +807,10 @@ class FractionGame {
         let total = 0;
         this.shapesData.forEach((shapeData, index) => {
             if (shapeData.isWhole) {
-                // 전체 도형: 사용자가 채운 비율 그대로 더함 (0~1)
-                total += this.userFillAmounts[index];
+                // 전체 도형: 사용자가 정한 목표값으로 계산
+                total += this.userFillAmounts[index] * (shapeData.target || 1);
             } else {
-                // 분수 부분 도형: 사용자가 채운 비율을 그대로 더함 (0~1)
+                // 분수 부분: 사용자가 채운 비율 그대로 더함 (0~1)
                 total += this.userFillAmounts[index];
             }
         });
@@ -701,24 +896,73 @@ class FractionGame {
     }
     
     resetShape() {
+        console.log('resetShape called');
+        console.log('userFillAmounts before reset:', this.userFillAmounts);
+        console.log('shapesData:', this.shapesData);
+        
+        // 기본 채우기 상태 초기화
         if (this.userFillAmounts.length > 0) {
             this.userFillAmounts.fill(0);
         }
         
+        // 각 도형의 시각적 상태 초기화
         this.shapesData.forEach((shapeData, index) => {
+            // 여러 방법으로 도형 요소 찾기
+            let shapeElement = document.getElementById(`shape-${index}`);
+            if (!shapeElement) {
+                // ID로 찾지 못하면 dataset.index로 찾기
+                shapeElement = document.querySelector(`[data-index="${index}"]`);
+            }
+            
+            if (!shapeElement) {
+                console.warn(`Shape element not found for index ${index}`);
+                return;
+            }
+            
+            console.log(`Resetting shape ${index} of type ${shapeData.type}`);
+            
+            // 기본 도형 채우기 초기화
             if (shapeData.type === 'circle') {
                 const filledPath = document.getElementById(`filled-path-${index}`);
-                if (filledPath) filledPath.setAttribute('d', '');
+                if (filledPath) {
+                    filledPath.setAttribute('d', '');
+                    console.log(`Reset circle ${index}`);
+                }
             } else if (shapeData.type === 'cup') {
                 const filledElement = document.getElementById(`filled-rect-${index}`);
-                if (filledElement) filledElement.style.height = '0%';
+                if (filledElement) {
+                    filledElement.style.height = '0%';
+                    console.log(`Reset cup ${index}`);
+                }
             } else {
-                this.updateHorizontalFill(index, 0);
+                // 직사각형
+                const filledElement = document.getElementById(`filled-rect-${index}`);
+                if (filledElement) {
+                    filledElement.style.width = '0%';
+                    console.log(`Reset rectangle ${index}`);
+                }
             }
+            
+            // 상호작용 모드별 추가 상태 초기화
+            this.resetModeSpecificStates(shapeElement, index);
         });
         
-        // user-fraction 요소가 제거되었으므로 해당 코드 제거
-        // document.getElementById('user-fraction').textContent = '-';
+        // 피드백 업데이트
+        this.updateFeedback();
+        console.log('userFillAmounts after reset:', this.userFillAmounts);
+    }
+    
+    resetModeSpecificStates(shapeElement, index) {
+        // 모드별 상태 변수들 초기화
+        if (this.modeStates.tapIncrements[index] !== undefined) {
+            this.modeStates.tapIncrements[index] = 0;
+        }
+        
+        // 연속 터치 모드 - 터치 효과 제거
+        const tapEffects = shapeElement.querySelectorAll('[style*="tapEffect"]');
+        tapEffects.forEach(effect => effect.remove());
+        
+        console.log(`Reset completed for shape ${index} in mode: ${this.settings.interactionMode}`);
     }
     
     skipQuestion() {
@@ -804,13 +1048,13 @@ class FractionGame {
         
         // 결과 기록
         this.gameState.results.push({
-            question: this.currentQuestion,
+            question: this.gameState.currentQuestion,
             target: this.formatFraction(this.currentFraction),
             userAnswer: this.formatFraction(this.convertToFraction(this.calculateTotalUserValue())),
-            score: scoreData.total,
-            accuracyScore: scoreData.accuracy,
-            timeBonus: scoreData.timeBonus,
-            streakBonus: scoreData.streakBonus,
+            score: scoreData.totalScore,
+            accuracyScore: scoreData.accuracyScore,
+            timeBonus: scoreData.timeScore,
+            streakBonus: scoreData.streakScore,
             skipped: false
         });
         
@@ -903,35 +1147,64 @@ class FractionGame {
     }
     
     calculateScore() {
-        const targetValue = this.currentFraction.wholeNumber + this.currentFraction.numerator / this.currentFraction.denominator;
-        const userValue = this.calculateTotalUserValue();
+        console.log('calculateScore called');
         
-        const error = Math.abs(targetValue - userValue) / Math.max(targetValue, 1);
-        const accuracy = Math.max(0, 1 - error);
-        
-        // 기본 점수 (정확도 기반, 0-80점)
-        const accuracyScore = Math.round(accuracy * 80);
-        
-        // 시간 보너스 (0-15점)
-        const timeBonus = Math.round((this.gameState.timeLeft / this.settings.timeLimit) * 15);
-        
-        // 연속 정답 보너스 (최대 5점)
+        // 기본값 설정
+        let totalScore = 50;
+        let accuracyScore = 40;
+        let timeBonus = 10;
         let streakBonus = 0;
-        if (this.settings.streakMode && accuracy > 0.8) {
-            this.gameState.streak++;
-            streakBonus = Math.min(this.gameState.streak, 5);
-        } else {
-            this.gameState.streak = 0;
+        
+        try {
+            console.log('currentFraction:', this.currentFraction);
+            console.log('userFillAmounts:', this.userFillAmounts);
+            
+            if (this.currentFraction && this.currentFraction.numerator !== undefined && this.currentFraction.denominator !== undefined) {
+                const targetValue = (this.currentFraction.wholeNumber || 0) + this.currentFraction.numerator / this.currentFraction.denominator;
+                const userValue = this.calculateTotalUserValue();
+                
+                console.log('targetValue:', targetValue);
+                console.log('userValue:', userValue);
+                
+                if (!isNaN(targetValue) && !isNaN(userValue)) {
+                    const error = Math.abs(targetValue - userValue) / Math.max(targetValue, 1);
+                    const accuracy = Math.max(0, 1 - error);
+                    
+                    // 기본 점수 (정확도 기반, 0-80점)
+                    accuracyScore = Math.round(accuracy * 80);
+                    
+                    // 시간 보너스 (0-15점)
+                    if (this.gameState.timeLeft !== undefined && this.settings.timeLimit !== undefined) {
+                        timeBonus = Math.round((this.gameState.timeLeft / this.settings.timeLimit) * 15);
+                    }
+                    
+                    // 연속 정답 보너스 (최대 5점)
+                    if (this.settings.streakMode && accuracy > 0.8) {
+                        this.gameState.streak = (this.gameState.streak || 0) + 1;
+                        streakBonus = Math.min(this.gameState.streak, 5);
+                    } else {
+                        this.gameState.streak = 0;
+                    }
+                    
+                    totalScore = Math.min(100, Math.max(0, accuracyScore + timeBonus + streakBonus));
+                }
+            }
+        } catch (error) {
+            console.error('Error in calculateScore:', error);
         }
         
-        const totalScore = Math.min(100, Math.max(0, accuracyScore + timeBonus + streakBonus));
+        console.log('final scores:', { totalScore, accuracyScore, timeBonus, streakBonus });
         
-        return {
-            total: totalScore,
-            accuracy: accuracyScore,
-            timeBonus: timeBonus,
-            streakBonus: streakBonus
+        const resultObj = {
+            totalScore: totalScore,
+            accuracyScore: accuracyScore,
+            timeScore: timeBonus,
+            streakScore: streakBonus
         };
+        
+        console.log('returning scoreData:', resultObj);
+        
+        return resultObj;
     }
     
     showExplanation() {
@@ -945,7 +1218,7 @@ class FractionGame {
             text = `${this.formatFraction(fraction)}은 1을 ${fraction.denominator}로 나눈 것 중 ${fraction.numerator}입니다.`;
         }
         
-        explanationDiv.querySelector('p').textContent = text;
+        explanationDiv.querySelector('p').innerHTML = text;
         explanationDiv.style.display = 'block';
     }
     
@@ -1004,28 +1277,42 @@ class FractionGame {
     showResults() {
         this.showScreen('result-screen');
         
-        // 통계 계산
-        const validResults = this.gameState.results.filter(r => !r.skipped);
-        const totalScore = validResults.length > 0 ? 
+        // 통계 계산 개선
+        const allResults = this.gameState.results;
+        const validResults = allResults.filter(r => !r.skipped);
+        const skippedCount = allResults.filter(r => r.skipped).length;
+        
+        // 정답 수: 80점 이상을 정답으로 간주 (더 엄격한 기준)
+        const correctCount = validResults.filter(r => r.score >= 80).length;
+        
+        // 평균 정확도: 실제 시도한 문제 기준으로 계산
+        const avgAccuracy = validResults.length > 0 ? 
+            Math.round((correctCount / validResults.length) * 100) : 0;
+        
+        // 평균 점수: 실제 시도한 문제들의 평균
+        const avgScore = validResults.length > 0 ? 
             Math.round(validResults.reduce((sum, r) => sum + r.score, 0) / validResults.length) : 0;
-        const correctCount = this.gameState.results.filter(r => !r.skipped && r.score >= 60).length;
-        const avgAccuracy = Math.round((correctCount / this.settings.totalQuestions) * 100);
         
         // 대분수 통계 계산
-        const mixedNumberCount = this.gameState.results.filter(r => 
+        const mixedNumberCount = allResults.filter(r => 
             r.target && r.target.includes('과')
         ).length;
-        const mixedNumberPercentage = Math.round((mixedNumberCount / this.settings.totalQuestions) * 100);
         
         // 결과 표시
         document.getElementById('total-problems').textContent = this.settings.totalQuestions;
-        document.getElementById('correct-count').textContent = correctCount;
+        document.getElementById('correct-count').textContent = `${correctCount} (건너뜀: ${skippedCount})`;
         document.getElementById('avg-accuracy').textContent = `${avgAccuracy}%`;
-        document.getElementById('total-score').textContent = `${totalScore}점`;
+        document.getElementById('total-score').textContent = `${avgScore}점`;
         
-        // 대분수 통계 표시 (결과 화면에 추가 정보로)
-        console.log(`대분수 문제: ${mixedNumberCount}개 (${mixedNumberPercentage}%)`);
-        console.log(`설정 대분수 비율: ${this.settings.mixedNumberRatio}%`);
+        // 콘솔에 상세 통계 출력
+        console.log(`=== 게임 결과 통계 ===`);
+        console.log(`총 문제: ${this.settings.totalQuestions}개`);
+        console.log(`시도한 문제: ${validResults.length}개`);
+        console.log(`건너뛴 문제: ${skippedCount}개`);
+        console.log(`정답 문제: ${correctCount}개 (80점 이상)`);
+        console.log(`평균 점수: ${avgScore}점`);
+        console.log(`정확도: ${avgAccuracy}%`);
+        console.log(`대분수 문제: ${mixedNumberCount}개`);
         
         // 상세 결과 표시
         this.showDetailedResults();
@@ -1039,6 +1326,8 @@ class FractionGame {
         detailsContainer.innerHTML = '';
         
         this.gameState.results.forEach((result, index) => {
+            console.log(`Result ${index + 1}:`, result); // 디버깅 로그 추가
+            
             const item = document.createElement('div');
             item.className = 'problem-detail-item';
             
@@ -1047,7 +1336,7 @@ class FractionGame {
             else if (result.score >= 60) scoreClass = 'score-good';
             
             const scoreDetail = result.skipped ? '건너뜀' : 
-                `${result.score}점 (정확도: ${result.accuracyScore || 0}점, 시간: +${result.timeBonus || 0}점)`;
+                `${result.score || 0}점 (정확도: ${result.accuracyScore || 0}점, 시간: +${result.timeBonus || 0}점)`;
             
             item.innerHTML = `
                 <div class="problem-number">${index + 1}번</div>
@@ -1065,22 +1354,62 @@ class FractionGame {
             date: new Date().toISOString(),
             settings: this.settings,
             results: this.gameState.results,
-            totalScore: this.gameState.score,
-            correctCount: this.gameState.results.filter(r => !r.skipped && r.score >= 60).length
+            summary: {
+                totalProblems: this.settings.totalQuestions,
+                attempted: this.gameState.results.filter(r => !r.skipped).length,
+                skipped: this.gameState.results.filter(r => r.skipped).length,
+                correct: this.gameState.results.filter(r => !r.skipped && r.score >= 80).length,
+                avgScore: this.gameState.results.filter(r => !r.skipped).length > 0 ? 
+                    Math.round(this.gameState.results.filter(r => !r.skipped).reduce((sum, r) => sum + r.score, 0) / 
+                    this.gameState.results.filter(r => !r.skipped).length) : 0
+            }
         };
         
-        // 로컬 스토리지에 저장
+        // 로컬 스토리지 관리 개선
         const savedResults = JSON.parse(localStorage.getItem('fractionGameResults') || '[]');
         savedResults.push(results);
+        
+        // 최대 50개의 결과만 보관 (용량 관리)
+        if (savedResults.length > 50) {
+            savedResults.splice(0, savedResults.length - 50);
+        }
+        
         localStorage.setItem('fractionGameResults', JSON.stringify(savedResults));
+        console.log(`결과 저장 완료. 총 저장된 게임: ${savedResults.length}개`);
+    }
+    
+    clearLocalStorage() {
+        localStorage.removeItem('fractionGameResults');
+        console.log('로컬 저장소 초기화 완료');
     }
     
     restartGame() {
+        // 현재 게임 상태만 초기화 (로컬 저장소는 유지)
+        console.log('게임 재시작 - 현재 상태 초기화');
         this.startGame();
     }
     
     newSettings() {
+        // 설정 화면으로 이동 (로컬 저장소 유지)
+        console.log('설정 변경으로 이동');
         this.showScreen('settings-screen');
+    }
+    
+    confirmClearStorage() {
+        const savedResults = JSON.parse(localStorage.getItem('fractionGameResults') || '[]');
+        const count = savedResults.length;
+        
+        if (count === 0) {
+            alert('저장된 기록이 없습니다.');
+            return;
+        }
+        
+        const confirmed = confirm(`저장된 ${count}개의 게임 기록을 모두 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`);
+        
+        if (confirmed) {
+            this.clearLocalStorage();
+            alert('모든 저장 기록이 삭제되었습니다.');
+        }
     }
     
     addShape() {
@@ -1132,6 +1461,15 @@ class FractionGame {
         const shapeDiv = document.createElement('div');
         shapeDiv.className = 'shape';
         shapeDiv.id = `shape-${index}`;
+        shapeDiv.dataset.index = index;
+        
+        // 상호작용 모드에 따른 CSS 클래스 추가
+        const modeClass = this.settings.interactionMode + '-mode';
+        shapeDiv.classList.add(modeClass);
+        
+        // 모드별 툴팁 추가
+        const tooltip = this.createModeTooltip(this.settings.interactionMode);
+        shapeDiv.appendChild(tooltip);
         
         if (shapeData.type === 'circle') {
             this.createCircleShape(shapeDiv, index);
@@ -1180,10 +1518,10 @@ class FractionGame {
             question: this.gameState.currentQuestion,
             target: this.formatFraction(this.currentFraction),
             userAnswer: this.formatFraction(this.convertToFraction(this.calculateTotalUserValue())),
-            score: scoreData.total,
-            accuracyScore: scoreData.accuracy,
-            timeBonus: scoreData.timeBonus,
-            streakBonus: scoreData.streakBonus,
+            score: scoreData.totalScore,
+            accuracyScore: scoreData.accuracyScore,
+            timeBonus: scoreData.timeScore,
+            streakBonus: scoreData.streakScore,
             skipped: false
         });
         
@@ -1198,109 +1536,125 @@ class FractionGame {
         // 팝업에서 자동으로 3초 후 다음 문제로 이동
     }
     
+    createModeTooltip(mode) {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'mode-tooltip';
+        
+        const tooltipTexts = {
+            'drag': '드래그하여 채우기',
+            'tap': '연속 터치로 조금씩 채우기',
+            'draw': '마우스로 직접 그려서 채우기',
+            'puzzle': '클릭하여 퍼즐 조각 채웁니다',
+            'pump': '클릭하여 펌프로 채웁니다',
+            'slice': '드래그하여 슬라이스 채웁니다',
+            'animation': '클릭하면 자동으로 애니메이션',
+            'multitouch': '여러 손가락으로 동시 터치',
+            'pattern': '클릭하여 패턴으로 채웁니다',
+            'speed': '빠르게 연속 클릭하여 채웁니다',
+            'robot': '클릭하여 정밀하게 10%씩 채웁니다',
+            'droplet': '클릭하여 물방울로 채웁니다'
+        };
+        
+        tooltip.textContent = tooltipTexts[mode] || '클릭하여 채우기';
+        return tooltip;
+    }
+    
+    setupModalEvents() {
+        // 점수 모달 관련 이벤트 설정
+        const modal = document.getElementById('score-modal');
+        const closeBtn = document.getElementById('modal-close-btn');
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.hideScoreModal();
+                this.nextQuestion();
+            });
+        }
+        
+        // 모달 배경 클릭시 닫기
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.hideScoreModal();
+                    this.nextQuestion();
+                }
+            });
+        }
+    }
+    
     updateAddShapeButtonVisibility() {
         const addShapeBtn = document.getElementById('add-shape-btn');
         const shapeControls = document.querySelector('.shape-controls');
         
-        // 대분수 문제인지 확인 (wholeNumber > 0)
-        if (this.currentFraction && this.currentFraction.wholeNumber > 0) {
-            if (shapeControls) shapeControls.style.display = 'flex';
-            if (addShapeBtn) addShapeBtn.style.display = 'block';
+        if (!addShapeBtn || !shapeControls) return;
+        
+        // 대분수 문제일 때만 "도형 추가" 버튼 표시
+        if (this.currentFraction.wholeNumber > 0) {
+            shapeControls.style.display = 'flex';
+            addShapeBtn.style.display = 'inline-block';
         } else {
-            if (shapeControls) shapeControls.style.display = 'none';
-            if (addShapeBtn) addShapeBtn.style.display = 'none';
+            shapeControls.style.display = 'none';
+            addShapeBtn.style.display = 'none';
         }
     }
     
     showScoreModal(scoreData) {
         const modal = document.getElementById('score-modal');
-        const totalScoreElement = document.getElementById('modal-total-score');
-        const accuracyScoreElement = document.getElementById('modal-accuracy-score');
-        const timeBonusElement = document.getElementById('modal-time-bonus');
-        const streakBonusElement = document.getElementById('modal-streak-bonus');
-        const streakBonusItem = document.getElementById('streak-bonus-item');
-        const targetAnswerElement = document.getElementById('modal-target-answer');
-        
-        // 점수 데이터 표시
-        totalScoreElement.textContent = `${scoreData.total}점`;
-        accuracyScoreElement.textContent = `${scoreData.accuracy}점`;
-        timeBonusElement.textContent = `+${scoreData.timeBonus}점`;
-        
-        // 연속 보너스가 있는 경우만 표시
-        if (scoreData.streakBonus > 0) {
-            streakBonusElement.textContent = `+${scoreData.streakBonus}점`;
-            streakBonusItem.style.display = 'flex';
-        } else {
-            streakBonusItem.style.display = 'none';
+        if (!modal) {
+            console.warn('Score modal not found');
+            return;
         }
         
-        // 정답 표시
-        targetAnswerElement.textContent = this.formatFraction(this.currentFraction);
+        // 점수 데이터 표시
+        const totalScoreElement = document.getElementById('modal-total-score');
+        const accuracyElement = document.getElementById('modal-accuracy-score');
+        const timeElement = document.getElementById('modal-time-bonus');
+        const streakElement = document.getElementById('modal-streak-bonus');
+        const streakItem = document.getElementById('streak-bonus-item');
+        const targetAnswerElement = document.getElementById('modal-target-answer');
+        
+        if (totalScoreElement) totalScoreElement.textContent = `${scoreData.totalScore}점`;
+        if (accuracyElement) accuracyElement.textContent = `${scoreData.accuracyScore}점`;
+        if (timeElement) timeElement.textContent = `+${scoreData.timeScore}점`;
+        if (streakElement) streakElement.textContent = `+${scoreData.streakScore}점`;
+        
+        // 연속 보너스가 있을 때만 표시
+        if (streakItem) {
+            if (scoreData.streakScore > 0) {
+                streakItem.style.display = 'flex';
+            } else {
+                streakItem.style.display = 'none';
+            }
+        }
+        
+        if (targetAnswerElement) {
+            targetAnswerElement.innerHTML = this.formatFraction(this.currentFraction);
+        }
         
         // 모달 표시
         modal.classList.add('show');
         
-        // 모달이 표시되면 처리 상태 리셋 (사용자가 모달에서 선택할 수 있도록)
-        this.gameState.isProcessing = false;
-        
-        // 이전 타이머가 있으면 클리어
+        // 자동으로 3초 후 닫기
         if (this.modalTimer) {
             clearTimeout(this.modalTimer);
         }
         
-        // 3초 후 자동으로 닫고 다음 문제로 이동
         this.modalTimer = setTimeout(() => {
-            this.hideScoreModalAndNext();
+            this.hideScoreModal();
+            this.nextQuestion();
         }, 3000);
     }
     
     hideScoreModal() {
         const modal = document.getElementById('score-modal');
-        modal.classList.remove('show');
+        if (modal) {
+            modal.classList.remove('show');
+        }
         
-        // 타이머 클리어
         if (this.modalTimer) {
             clearTimeout(this.modalTimer);
             this.modalTimer = null;
         }
-    }
-    
-    hideScoreModalAndNext() {
-        console.log('hideScoreModalAndNext called');
-        console.log('isProcessing:', this.gameState.isProcessing);
-        
-        // 점수 모달에서는 isProcessing 체크를 하지 않음 (모달이 표시된 상태에서는 항상 진행 가능)
-        console.log('Hiding modal and moving to next question');
-        this.hideScoreModal();
-        
-        // 약간의 지연 후 다음 문제로 (모달 닫힘 애니메이션 고려)
-        setTimeout(() => {
-            console.log('Calling nextQuestion after timeout');
-            this.nextQuestion();
-        }, 100);
-    }
-    
-    setupModalEvents() {
-        const modal = document.getElementById('score-modal');
-        const closeBtn = document.getElementById('modal-close-btn');
-        
-        console.log('Setting up modal events, closeBtn:', closeBtn);
-        
-        // 확인 버튼 클릭 시 모달 닫고 다음 문제로
-        closeBtn.addEventListener('click', (e) => {
-            console.log('Close button clicked!');
-            e.preventDefault();
-            e.stopPropagation();
-            this.hideScoreModalAndNext();
-        });
-        
-        // 모달 배경 클릭 시 닫기 (선택사항)
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                console.log('Modal background clicked!');
-                this.hideScoreModalAndNext();
-            }
-        });
     }
 }
 
