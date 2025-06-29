@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>분수 감각 향상 웹앱</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 교사 설정 화면 -->
+    <div id="settings-screen" class="screen active">
+        <div class="settings-container">
+            <h1>분수 감각 향상 웹앱 설정</h1>
+            <div class="settings-grid">
+                <div class="setting-group">
+                    <label for="difficulty">난이도:</label>
+                    <select id="difficulty">
+                        <option value="easy">하 (분모 2~4)</option>
+                        <option value="medium">중 (분모 5~8)</option>
+                        <option value="hard">상 (분모 9~12)</option>
+                        <option value="expert">확장 (분모 13~20)</option>
+                    </select>
+                </div>
+                
+                <div class="setting-group">
+                    <label for="shape-random">도형 랜덤 변경:</label>
+                    <select id="shape-random">
+                        <option value="true">ON</option>
+                        <option value="false">OFF</option>
+                    </select>
+                </div>
+                
+                <div class="setting-group">
+                    <label for="time-limit">제한 시간 (초):</label>
+                    <input type="number" id="time-limit" value="30" min="10" max="300">
+                </div>
+                
+                <div class="setting-group">
+                    <label for="streak-mode">연속 정답 모드:</label>
+                    <select id="streak-mode">
+                        <option value="false">OFF</option>
+                        <option value="true">ON</option>
+                    </select>
+                </div>
+                
+                <div class="setting-group">
+                    <label for="answer-mode">정답 확인 방식:</label>
+                    <select id="answer-mode">
+                        <option value="manual">다음 버튼 클릭</option>
+                        <option value="auto">자동 전환 (3초 후)</option>
+                    </select>
+                </div>
+                
+                <div class="setting-group">
+                    <label for="total-questions">총 문항 수:</label>
+                    <input type="number" id="total-questions" value="10" min="1" max="50">
+                </div>
+                
+                <div class="setting-group">
+                    <label for="skip-allowed">건너뛰기 허용:</label>
+                    <select id="skip-allowed">
+                        <option value="true">허용</option>
+                        <option value="false">금지</option>
+                    </select>
+                </div>
+                
+                <div class="setting-group">
+                    <label for="skip-count">건너뛰기 가능 횟수:</label>
+                    <input type="number" id="skip-count" value="3" min="0" max="10">
+                </div>
+                
+                <div class="setting-group">
+                    <label for="hide-answers">정답 숨기기 (단체 풀이용):</label>
+                    <select id="hide-answers">
+                        <option value="false">OFF</option>
+                        <option value="true">ON</option>
+                    </select>
+                </div>
+                
+                <div class="setting-group">
+                    <label for="mixed-number-ratio">대분수 출현 비율 (%):</label>
+                    <input type="number" id="mixed-number-ratio" value="30" min="0" max="100" step="5">
+                    <small>0%: 대분수 없음, 100%: 모두 대분수</small>
+                </div>
+                
+                <div class="setting-group">
+                    <label for="mixed-number-max">대분수 자연수 최대값:</label>
+                    <input type="number" id="mixed-number-max" value="3" min="1" max="10">
+                    <small>예: 3 설정 시 최대 3과 2/5 형태</small>
+                </div>
+            </div>
+            
+            <div class="settings-buttons">
+                <button id="help-btn" class="btn btn-help">사용법 보기</button>
+                <button id="start-btn" class="btn btn-primary">게임 시작</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 튜토리얼 화면 -->
+    <div id="tutorial-screen" class="screen">
+        <div class="tutorial-container">
+            <h2>사용법 안내</h2>
+            <div class="tutorial-content">
+                <div class="tutorial-step">
+                    <h3>1. 문제 확인</h3>
+                    <p>화면 상단에 표시되는 분수를 확인하세요.</p>
+                </div>
+                <div class="tutorial-step">
+                    <h3>2. 도형 채우기</h3>
+                    <p>도형을 클릭하거나 드래그하여 문제에서 요구하는 만큼 채우세요.</p>
+                </div>
+                <div class="tutorial-step">
+                    <h3>3. 정답 확인</h3>
+                    <p>시간이 끝나면 정답이 다른 색상으로 표시됩니다.</p>
+                </div>
+                <div class="tutorial-step">
+                    <h3>4. 버튼 사용</h3>
+                    <p>• 초기화: 현재 도형을 다시 비워줍니다<br>
+                       • 건너뛰기: 현재 문제를 건너뜁니다 (횟수 제한)<br>
+                       • 다음: 다음 문제로 이동합니다</p>
+                </div>
+            </div>
+            <button id="tutorial-close" class="btn btn-primary">확인</button>
+        </div>
+    </div>
+
+    <!-- 게임 화면 -->
+    <div id="game-screen" class="screen">
+        <!-- 문제 지시 영역 -->
+        <div class="question-area">
+            <h2 id="question-text">1과 3/4을 채워보세요!</h2>
+            <div class="progress-info">
+                <span id="question-progress">1 / 10</span>
+                <span id="timer">⏱ 30초</span>
+            </div>
+        </div>
+
+        <!-- 메인 게임 영역 -->
+        <div class="game-area">
+            <!-- 도형 영역 (70%) -->
+            <div class="shape-area">
+                <!-- 도형 추가 버튼 -->
+                <div class="shape-controls">
+                    <button id="add-shape-btn" class="btn btn-secondary">도형 추가</button>
+                </div>
+                
+                <!-- 도형이 동적으로 생성될 영역 -->
+                <div id="shape-container">
+                    <!-- 도형들이 동적으로 생성됩니다 -->
+                </div>
+            </div>
+
+            <!-- 결과 피드백 영역 (30%) -->
+            <div class="feedback-area">
+                <div id="feedback-content">
+                    <div class="feedback-item">
+                        <label>목표 분수:</label>
+                        <span id="target-fraction">1과 3/4</span>
+                    </div>
+                    <div class="feedback-item">
+                        <label>진행 상황:</label>
+                        <span id="progress-display">문제 1/10</span>
+                    </div>
+                    <div class="feedback-item">
+                        <label>남은 시간:</label>
+                        <span id="time-display">30초</span>
+                    </div>
+                    <!-- 점수 관련 항목들은 팝업에서만 표시 -->
+                    <div class="feedback-explanation" id="explanation" style="display:none">
+                        <p>1과 3/4은 1과, 1을 4로 나눈 것 중 3입니다.</p>
+                    </div>
+                    <div class="encouragement-message">
+                        <p id="encouragement-text">감각으로 분수의 크기를 느껴보세요!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단 조작 버튼 -->
+        <div class="control-buttons">
+            <button id="reset-btn" class="btn btn-secondary">초기화</button>
+            <button id="skip-btn" class="btn btn-warning">건너뛰기 (<span id="skip-count-display">3</span>)</button>
+            <button id="next-btn" class="btn btn-primary">다음</button>
+        </div>
+    </div>
+
+    <!-- 결과 화면 -->
+    <div id="result-screen" class="screen">
+        <div class="result-container">
+            <h2>학습 결과</h2>
+            <div class="result-summary">
+                <div class="summary-item">
+                    <label>총 문제 수:</label>
+                    <span id="total-problems">10</span>
+                </div>
+                <div class="summary-item">
+                    <label>정답 수:</label>
+                    <span id="correct-count">7</span>
+                </div>
+                <div class="summary-item">
+                    <label>평균 정확도:</label>
+                    <span id="avg-accuracy">85%</span>
+                </div>
+                <div class="summary-item">
+                    <label>총 점수:</label>
+                    <span id="total-score">750점</span>
+                </div>
+            </div>
+            
+            <div class="result-details">
+                <h3>문제별 상세 결과</h3>
+                <div id="problem-details">
+                    <!-- 문제별 결과가 동적으로 생성됩니다 -->
+                </div>
+            </div>
+            
+            <div class="result-buttons">
+                <button id="restart-btn" class="btn btn-primary">다시 시작</button>
+                <button id="new-settings-btn" class="btn btn-secondary">설정 변경</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 점수 팝업 모달 -->
+    <div id="score-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>문제 결과</h3>
+            </div>
+            <div class="modal-body">
+                <div class="score-display">
+                    <div class="total-score">
+                        <span class="score-label">총 점수</span>
+                        <span class="score-value" id="modal-total-score">85점</span>
+                    </div>
+                    <div class="score-breakdown">
+                        <div class="score-item">
+                            <span class="score-label">정확도</span>
+                            <span class="score-value" id="modal-accuracy-score">70점</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">시간 보너스</span>
+                            <span class="score-value" id="modal-time-bonus">+15점</span>
+                        </div>
+                        <div class="score-item" id="streak-bonus-item" style="display: none;">
+                            <span class="score-label">연속 보너스</span>
+                            <span class="score-value" id="modal-streak-bonus">+5점</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="answer-comparison">
+                    <div class="target-answer">
+                        <span class="answer-label">정답</span>
+                        <span class="answer-value" id="modal-target-answer">1과 3/4</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-close-btn" class="btn btn-primary">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
