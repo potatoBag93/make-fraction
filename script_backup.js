@@ -1420,7 +1420,7 @@ class FractionGame {
         
         // 최대 50개의 결과만 보관 (용량 관리)
         if (savedResults.length > 50) {
-            savedResults.splice(0, savedResults.length - 50);
+            savedResults.shift();
         }
         
         localStorage.setItem('fractionGameResults', JSON.stringify(savedResults));
@@ -1449,7 +1449,7 @@ class FractionGame {
         const count = savedResults.length;
         
         if (count === 0) {
-            alert('저장된 기록이 없습니다.');
+            alert('삭제할 저장 기록이 없습니다.');
             return;
         }
         
@@ -1457,7 +1457,7 @@ class FractionGame {
         
         if (confirmed) {
             this.clearLocalStorage();
-            alert('모든 저장 기록이 삭제되었습니다.');
+            alert('저장 기록이 삭제되었습니다.');
         }
     }
     
@@ -1466,6 +1466,7 @@ class FractionGame {
         
         // 최대 5개까지 도형 추가 가능
         if (this.shapesData.length >= 5) {
+            alert('최대 5개까지만 도형을 추가할 수 있습니다.');
             return;
         }
         
@@ -1478,74 +1479,19 @@ class FractionGame {
             isWhole: false,
             index: newIndex
         });
+        
         this.userFillAmounts.push(0);
         
-        // 새 도형만 추가 (기존 도형들은 유지)
-        this.addNewShapeElement(newIndex);
-    }
-    
-    addNewShapeElement(index) {
-        const shapeContainer = document.getElementById('shape-container');
-        const shapeData = this.shapesData[index];
+        // 도형 요소 다시 생성
+        this.createShapeElements();
         
-        // 현재 행 찾기 또는 새 행 생성
-        let currentRow = shapeContainer.querySelector('.shapes-row:last-child');
-        const shapesInLastRow = currentRow ? currentRow.children.length : 3;
+        // 이벤트 다시 바인딩
+        this.bindShapeEvents();
         
-        if (!currentRow || shapesInLastRow >= 3) {
-            currentRow = document.createElement('div');
-            currentRow.className = 'shapes-row';
-            shapeContainer.appendChild(currentRow);
-        }
-        
-        const shapeWrapper = document.createElement('div');
-        shapeWrapper.style.display = 'flex';
-        shapeWrapper.style.flexDirection = 'column';
-        shapeWrapper.style.alignItems = 'center';
-        
-        const shapeLabel = document.createElement('div');
-        shapeLabel.className = 'shape-label';
-        shapeLabel.textContent = `도형 ${index + 1}`;
-        
-        const shapeDiv = document.createElement('div');
-        shapeDiv.className = 'shape';
-        shapeDiv.id = `shape-${index}`;
-        shapeDiv.dataset.index = index;
-        
-        // 상호작용 모드에 따른 CSS 클래스 추가
-        const modeClass = this.settings.interactionMode + '-mode';
-        shapeDiv.classList.add(modeClass);
-        
-        // 모드별 툴팁 추가
-        const tooltip = this.createModeTooltip(this.settings.interactionMode);
-        shapeDiv.appendChild(tooltip);
-        
-        if (shapeData.type === 'circle') {
-            this.createCircleShape(shapeDiv, index);
-        } else if (shapeData.type === 'rectangle') {
-            this.createRectangleShape(shapeDiv, index);
-        } else if (shapeData.type === 'cup') {
-            this.createCupShape(shapeDiv, index);
-        }
-        
-        shapeWrapper.appendChild(shapeLabel);
-        shapeWrapper.appendChild(shapeDiv);
-        currentRow.appendChild(shapeWrapper);
+        console.log(`새 도형 추가: 총 ${this.shapesData.length}개`);
     }
     
     manualNextQuestion() {
-        // 연속 클릭 방지: 이미 처리 중이거나 버튼이 비활성화된 경우 무시
-        const nextBtn = document.getElementById('next-btn');
-        if (nextBtn.disabled || this.gameState.isProcessing) {
-            return;
-        }
-        
-        // 처리 중 상태로 설정
-        this.gameState.isProcessing = true;
-        nextBtn.disabled = true;
-        nextBtn.textContent = '처리중...';
-        nextBtn.style.opacity = '0.6';
-        
         if (!this.gameState.isPlaying) {
             // 이미 시간이 다 되어 점수가 계산된 경우
             this.nextQuestion();

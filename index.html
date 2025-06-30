@@ -7,8 +7,34 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- 시작 화면 -->
+    <div id="start-screen" class="screen active">
+        <div class="start-container">
+            <h1>분수 감각 향상 웹앱</h1>
+            <div class="start-settings">
+                <div class="setting-group">
+                    <label for="start-difficulty">난이도:</label>
+                    <select id="start-difficulty">
+                        <option value="easy">하 (분모 2~4)</option>
+                        <option value="medium">중 (분모 5~8)</option>
+                        <option value="hard">상 (분모 9~12)</option>
+                        <option value="expert">확장 (분모 13~20)</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="start-time-limit">제한 시간 (초):</label>
+                    <input type="number" id="start-time-limit" value="30" min="10" max="300">
+                </div>
+            </div>
+            <div class="start-buttons">
+                <button id="start-simple-btn" class="btn btn-primary">시작</button>
+                <button id="open-settings-btn" class="btn btn-secondary">상세 설정</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 교사 설정 화면 -->
-    <div id="settings-screen" class="screen active">
+    <div id="settings-screen" class="screen">
         <div class="settings-container">
             <h1>분수 감각 향상 웹앱 설정</h1>
             <div class="settings-grid">
@@ -268,6 +294,11 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- 분리된 JS 파일들을 순서대로 로드 -->
+    <script src="js/utils.js"></script>
+    <script src="js/shapes.js"></script>
+    <script src="js/scoring.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/game.js"></script>
 </body>
 </html>
